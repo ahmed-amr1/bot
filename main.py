@@ -10,30 +10,38 @@ from nextcord.ui import button,View,Button
 from nextcord.interactions import Interaction
 from nextcord.ext import menus
 import os
-os.system("mode 50,20 & title Schtabtag")
+#os.system("mode 50,20 & title Schtabtag")
 import wikipedia as wiki_module
 import datetime
+import platform
 import random
 import urllib.request
 import re
+import discord
 from fractions import Fraction
 import math
 from io import BytesIO
 from typing import Union, Optional
 from petpetgif import petpet as petpetgif
 import sys
-import psutil
 import translators as ts
 from itertools import cycle
 from colorama import Fore, Back, Style
 import dislash
-from dislash import InteractionClient
+from dislash import InteractionClient, Option, OptionChoice
 #import json
 
+def cls():
+    if platform.system() == "Linux" or platform.system() == "Darwin":
+        os.system("clear")
+    if platform.system() == "Windows":
+        os.system("cls")
+
+ownerID = 819652262993461279
 official_guild_id = 888211482184134778
 
-token = os.environ["schtabtag"]
-
+token = "ODIzMjMxODY4MzI4NzM4ODI2.YFd0bA.RDDz2YW4MRs4pikkiSMgh31U_nw"
+color = 0xAC27FA
 intents = nextcord.Intents.all()
 
 client = commands.Bot(command_prefix=".",intents=intents)
@@ -41,7 +49,7 @@ slash = InteractionClient(client,test_guilds=[official_guild_id],modify_send=Fal
 
 statuses = cycle(["with {member_count} members","in {server_count} servers",".help","with Ahmed Amr#5544"])
 
-@tasks.loop(seconds=20)
+@tasks.loop(seconds=12)
 async def change_status():
     await client.wait_until_ready()
     status = next(statuses)
@@ -53,11 +61,17 @@ async def change_status():
 
 @client.event
 async def on_ready():
-    os.system("cls")
+    channel = client.get_channel(916091369787899924)
+    em = nextcord.Embed(title="Schtabtag has just started!",description=f"You can now interact freely with {client.user.mention}!",timestamp=datetime.datetime.utcnow(),color=0xAC27FA)
+    em.timestamp = datetime.datetime.utcnow()
+    em.set_thumbnail(url=client.user.display_avatar.url)
+    await channel.send(embed=em)
+    cls()
     print(f'{Fore.MAGENTA}{client.user} is ready!')
     response = time.time() - begin
     print(f'{Fore.CYAN}Took {"{:.2f}".format(response)}sec to start.{Style.RESET_ALL}\n...\n')
-    change_status.start()
+    if not change_status.is_running():
+        change_status.start()
 
 class view(View):
     def __init__(self):
@@ -71,6 +85,46 @@ class view(View):
         button.label = str(label)
 
         await interaction.response.edit_message(view = self)
+
+class selfrole(View):
+    def __init__(self):
+        super().__init__(timeout=None)
+    @button(label="Annoncements role",custom_id="ann button",style=nextcord.ButtonStyle.primary)
+    async def ann(self,button : Button,interaction : Interaction):
+        role = interaction.guild.get_role(916100172000399481)
+        if role in interaction.user.roles:
+            await interaction.user.remove_roles(role)
+            await interaction.response.send_message(f"The {role.mention} role has been removed from your roles",ephemeral=True)
+        else:
+            await interaction.user.add_roles(role)
+            await interaction.response.send_message(f"The {role.mention} role has been added to your roles",ephemeral=True)
+
+
+role_dict = {
+    "role":"",
+    "emoji":"",
+    "label":"",
+}
+
+@client.command()
+async def react_role(ctx,label,emoji,roles,*,message:str):
+    em = nextcord.Embed(title="React to get roles",description=message,color=color,timestamp=datetime.datetime.utcnow())
+    role_dict = {
+        "role":roles,
+        "emoji":emoji,
+        "label":label
+    }
+    await ctx.send(embed=em,view = role())
+
+@client.command()
+async def self_roles(ctx):
+    if ctx.guild.id == official_guild_id and ctx.channel.id == 908780161040805888:
+        await ctx.send("Select your roles:",view=selfrole())
+    elif ctx.guild.id == official_guild_id and ctx.channel.id != 908780161040805888:
+        channel = ctx.guild.get_channel(908780161040805888)
+        await ctx.send(f"Please use this command in {channel.mention}")
+    elif ctx.guild.id != official_guild_id:
+        await ctx.send("Sorry but this command is exclusive for Schtabtag's bot server")
 
 @client.command()
 async def count(ctx):
@@ -95,12 +149,28 @@ async def pet(ctx, image: Optional[Union[nextcord.PartialEmoji, nextcord.member.
     petpetgif.make(source, dest)
     dest.seek(0) # set the file pointer back to the beginning so it doesn't upload a blank file.
     await ctx.send(file=nextcord.File(dest, filename=f"{image[0]}-petpet.gif"))
+    await ctx.send(embed=nextcord.Embed(title="hehe").set_image(url=dest))
 
 @client.event
 async def on_message(msg):
     if msg.content == "<@!823231868328738826>" or msg.content == "<@823231868328738826>" or msg.content == "@Schtabtag#4097" or msg.content == "@Schtabtag":
         respond = ["Yes?","What?","Don't mention me again","I'm here"]
         await msg.reply(random.choice(respond))
+    if msg.content == "CLS" and msg.author.id == ownerID:
+        cls()
+    if msg.content.startswith("code:\n```py") and msg.content.endswith("```"):
+        mssg = msg.content[12:-4].replace("\n",",")
+        await msg.channel.send(mssg)
+        try:
+            try:
+                await eval(mssg)
+            except Exception as e:
+                await msg.channel.send(e)
+        except:
+            try:
+                eval()
+            except Exception as e:
+                await msg.channel.send(e)
     await client.process_commands(msg)
 
 @client.command()
@@ -118,6 +188,7 @@ async def wikipedia(ctx,amount_of_sentences_to_search_for,*,search_query : str):
 
     try:
         em = nextcord.Embed(title="Wikipedia",description=f"{wiki_module.summary(search_query,sentences=amount_of_sentences_to_search_for)}",color=0xAC27FA,timestamp=datetime.datetime.utcnow())
+        em.set_thumbnail(url="https://media.discordapp.net/attachments/893417057541050368/913832653927616562/2244px-Wikipedia-logo-v2.svg.png")
     except:
         em = nextcord.Embed(title="Wikipedia",description=f"Couldn't find any result of that.",color=0xAC27FA,timestamp=datetime.datetime.utcnow())
     em.set_footer(text=f"Requested by {ctx.author}",icon_url=ctx.author.display_avatar.url)
@@ -212,7 +283,8 @@ class MySource(menus.ListPageSource):
             self.total = len(entries) + 1
         offset = menu.current_page * self.per_page
         export = ''.join(f"{entries}")
-        return f"`{menu.current_page+1}/{self.get_max_pages()}`\n{export}"
+        page = f"`{menu.current_page+1}/{self.get_max_pages()}`"
+        return f"`{page}`\n{export}"
 
 
 @client.command(aliases=['yt'])
@@ -264,6 +336,13 @@ async def country(ctx):
     view = DropdownView()
     await ctx.send("Choose your country ",view=view)
 
+@client.command(aliases=["length","len"])
+async def measure(ctx,*,text_to_be_measured=None):
+    if text_to_be_measured==None:
+        await ctx.send("Please provide text to be measured")
+    else:
+        await ctx.reply(f"Text : `{text_to_be_measured}`\nThe number of characters in the text : `{len(text_to_be_measured)}`")
+
 @client.command(aliases=['cl','purge','delete','remove'])
 @commands.has_permissions(manage_messages=True)
 async def clear(ctx,amount_of_messages_to_be_deleted:int=1):
@@ -306,9 +385,6 @@ async def wikipedia_error(ctx: commands.Context, error: commands.CommandError):
     await ctx.message.delete(delay=6)
 
 
-
-
-""" 
 @slash.slash_command(name="wikipedia",description="Searches for a specific argument in wikipedia",options=[Option(name="argument",description="The argument which will be searched for in wikipedia",required=True),Option(name="sentences",description="The number of sentences to search for",required=False),Option(name="language",description="The language to search in",required=False,choices=[
                 OptionChoice(
                     name="English - English",
@@ -384,15 +460,16 @@ async def wikipedia_error(ctx: commands.Context, error: commands.CommandError):
 
 async def wiki(ctx,argument,sentences=1,language="en"):
     wiki_module.set_lang(language)
-    search = nextcord.Embed(title="Wikpedia",description="Searching...",color=0xAC27FA,timestamp=datetime.datetime.utcnow())
+    search = discord.Embed(title="Wikpedia",description="Searching...",color=0xAC27FA,timestamp=datetime.datetime.utcnow())
 
     msg = await ctx.send(embed=search)
 
     try:
-        em = nextcord.Embed(title="Wikipedia",description=f"{wiki_module.summary(argument,sentences=sentences)}",color=0xAC27FA,timestamp=datetime.datetime.utcnow())
+        em = discord.Embed(title="Wikipedia",description=f"{wiki_module.summary(argument,sentences=sentences)}",color=0xAC27FA,timestamp=datetime.datetime.utcnow())
+        em.set_thumbnail(url="https://media.discordapp.net/attachments/893417057541050368/913832653927616562/2244px-Wikipedia-logo-v2.svg.png")
     except:
-        em = nextcord.Embed(title="Wikipedia",description=f"Couldn't find any result of that.",color=0xAC27FA,timestamp=datetime.datetime.utcnow())
-    em.set_footer(text=f"Requested by {ctx.author.name}",icon_url=ctx.author.display_avatar.url)
+        em = discord.Embed(title="Wikipedia",description=f"Couldn't find any result of that.",color=0xAC27FA,timestamp=datetime.datetime.utcnow())
+    em.set_footer(text=f"Requested by {ctx.author.name}",icon_url=ctx.author.avatar.url)
     await msg.edit(embed=em)
 
 @slash.slash_command(name="translate",description="Translates the passed argument into the passed language (Default:English)",options=[Option(name="argument",description="The argument which will be translated",required=True),Option(name="source",description="The language which the argument will be translated from",required=False,choices=[
@@ -545,7 +622,7 @@ async def translate(ctx,argument,source="auto",dest="en"):
     try:
         src = source
         dst = dest
-        search = nextcord.Embed(title="Translating...",description="```py\n\"Please wait...\"```",color=0xAC27FA,timestamp=datetime.datetime.utcnow())
+        search = discord.Embed(title="Translating...",description="```py\n\"Please wait...\"```",color=0xAC27FA,timestamp=datetime.datetime.utcnow())
         msg = await ctx.send(embed=search)
         if src == "auto":
             src = "Auto detect language"
@@ -617,15 +694,16 @@ async def translate(ctx,argument,source="auto",dest="en"):
             dst = "Chinese - 中文, Zhōngwén"
         if dst == "fa":
             dst = "Persian - فارسی"
-        em = nextcord.Embed(title="Translator",
+        em = discord.Embed(title="Translator",
         description=f"From ({src}) To ({dst})",color=0xAC27FA,timestamp=datetime.datetime.utcnow())
         em.add_field(name="Source text",value=f"```py\n\"{argument}\"```",inline=False)
+        em.set_thumbnail(url="https://media.discordapp.net/attachments/893417057541050368/916290939893448714/Google_Translate_Icon.png")
         em.add_field(inline=False,name="Translated text",value=f"```py\n\"{ts.google(argument,to_language=dest,from_language=source)}\"```")
-        em.set_footer(text=f"Requested by {ctx.author.name}",icon_url=ctx.author.display_avatar.url)
+        em.set_footer(text=f"Requested by {ctx.author.name}",icon_url=ctx.author.avatar.url)
         await msg.edit(embed=em)
     except:
-        em = nextcord.Embed(description="Please check your arguments again.\nSyntax `trans src-lang dest-lang text`\nYou can read language abbreviations from [here](https://pastebin.com/PrxskfGq).",color=0xAC27FA,timestamp=datetime.datetime.utcnow())
-        em.set_footer(text=f"Requested by {ctx.author.name}",icon_url=ctx.author.display_avatar.url)
+        em = discord.Embed(description="Please check your arguments again.\nSyntax `trans src-lang dest-lang text`\nYou can read language abbreviations from [here](https://pastebin.com/PrxskfGq).",color=0xAC27FA,timestamp=datetime.datetime.utcnow())
+        em.set_footer(text=f"Requested by {ctx.author.name}",icon_url=ctx.author.avatar.url)
         await msg.edit(embed=em)
 
 @slash.slash_command(
@@ -719,10 +797,10 @@ async def translate(ctx,argument,source="auto",dest="en"):
 )
 
 async def embed(ctx, title,description="",color=0x000000,url="",footer=""):
-    embed = nextcord.Embed(colour=color,title=title,description=description,url=url)
-    embed.set_footer(text=footer)
-    await ctx.send(embed=embed)
- """
+    em = discord.Embed(colour=color,title=title,description=description,url=url)
+    em.set_footer(text=footer)
+    await ctx.send(embed=em)
+
 
 @client.command()
 async def emojify(ctx,text_to_be_converted_to_emojis):
@@ -803,51 +881,58 @@ async def userinfo(ctx, user_to_display_information_about:commands.MemberConvert
 
 
 @client.command(aliases=['hex'])
-async def hexadecimal(ctx,hex_code):
+async def hexadecimal(ctx,hex_code=None):
     if hex_code == None:
         await ctx.send("Please specify a Hexadecimal color.")
-    else:      
-        result = ''
-        final = "#"
-        if hex_code.startswith("#"):
-            final += hex_code.replace("#","")
-        if hex_code.startswith("#") == False:
-            final += hex_code
-        red = "0x" + final[1] + final[2]
-        green = "0x" + final[3] + final[4]
-        blue = "0x" + final[5] + final[6]
-        red = int(red,base=0)
-        green = int(green,base=0)
-        blue = int(blue,base=0)
-        link = f"https://singlecolorimage.com/get/{final[1:]}/900x900.png"
-        em = nextcord.Embed(title=f"({red},{green},{blue})",description=f"{final.upper()}",color=nextcord.Color.from_rgb(red,green,blue),timestamp=datetime.datetime.utcnow())
-        em.set_image(url=link)
+    else:
+        try:
+            result = ''
+            final = "#"
+            if hex_code.startswith("#"):
+                final += hex_code.replace("#","")
+            if hex_code.startswith("#") == False:
+                final += hex_code
+            red = "0x" + final[1] + final[2]
+            green = "0x" + final[3] + final[4]
+            blue = "0x" + final[5] + final[6]
+            red = int(red,base=0)
+            green = int(green,base=0)
+            blue = int(blue,base=0)
+            link = f"https://singlecolorimage.com/get/{final[1:]}/900x900.png"
+            em = nextcord.Embed(title=f"({red},{green},{blue})",description=f"{final.upper()}",color=nextcord.Color.from_rgb(red,green,blue),timestamp=datetime.datetime.utcnow())
+            em.set_image(url=link)
+        except:
+            em = nextcord.Embed(title=f"Error",description=f"Please provide a valid hexadecimal code like #7378F",color=0xFFFFFF,timestamp=datetime.datetime.utcnow())
         em.set_footer(text=f"Requested by {ctx.author.name}",icon_url=ctx.author.display_avatar.url)
         await ctx.send(embed=em)
 
 
 @client.command()
-async def rgb(ctx,rgb_color):
+async def rgb(ctx,*,rgb_color=None):
     if rgb_color == None:
         await ctx.send("Please specify an RGB color.")
-    else:      
-        result = ''
-        show = ""
-        if rgb_color.startswith("(") and rgb_color.endswith(")"):
-            fin = rgb_color[1:-1].split(",")
-            show =  rgb_color[1:-1]
-        if rgb_color.startswith("(") == False and rgb_color.endswith(")") == False:
-            fin = rgb_color.split(",")
-            show = rgb_color
-        fin = [int(n) for n in fin]
-        for each in fin:
-            hexadecimal = hex(each)[2:]
-            if len(hexadecimal) == 1:
-                hexadecimal = "0" + hexadecimal
-            result+=hexadecimal
-        link = f"https://singlecolorimage.com/get/{result}/900x900.png"
-        em = nextcord.Embed(title=f"#{result.upper()}",description=f"({show})",color=nextcord.Color.from_rgb(fin[0],fin[1],fin[2]),timestamp=datetime.datetime.utcnow())
-        em.set_image(url=link)
+    else:
+        try:
+            result = ''
+            show = ""
+            if rgb_color.startswith("(") and rgb_color.endswith(")"):
+                fin = rgb_color[1:-1].split(",")
+                show =  rgb_color[1:-1]
+            if rgb_color.startswith("(") == False and rgb_color.endswith(")") == False:
+                fin = rgb_color.split(",")
+                show = rgb_color
+            fin = [int(n.strip()) for n in fin]
+            
+            for each in fin:
+                hexadecimal = hex(each)[2:]
+                if len(hexadecimal) == 1:
+                    hexadecimal = "0" + hexadecimal
+                result+=hexadecimal
+            link = f"https://singlecolorimage.com/get/{result}/900x900.png"
+            em = nextcord.Embed(title=f"#{result.upper()}",description=f"({show})",color=nextcord.Color.from_rgb(fin[0],fin[1],fin[2]),timestamp=datetime.datetime.utcnow())
+            em.set_image(url=link)
+        except:
+            em = nextcord.Embed(title=f"Error",description=f"Please provide a valid RGB color like (12,34,56)",color=0xFFFFFF,timestamp=datetime.datetime.utcnow())
         em.set_footer(text=f"Requested by {ctx.author.name}",icon_url=ctx.author.display_avatar.url)
         await ctx.send(embed=em)
 
@@ -868,13 +953,12 @@ async def whereami(ctx):
 @client.command(aliases=['stats'])
 async def statstics(ctx):
     username = client.user
-    ownerID = 819652262993461279
     servers = len(client.guilds)
     nextcordV = nextcord.__version__
-    process = psutil.Process(os.getpid())
-    ram =  (process.memory_info().rss / 1000) / 1000
-    ram = "{:.2f}".format(ram)
-    ram = str(ram) + "mb"
+    #process = psutil.Process(os.getpid())
+    #ram =  (process.memory_info().rss / 1000) / 1000
+    #ram = "{:.2f}".format(ram)
+    #ram = str(ram) + "mb"
     ver = sys.version_info
     em = nextcord.Embed(title=f'Bot\'s statstics',color=0xAC27FA,timestamp=datetime.datetime.utcnow())
     em.add_field(name=":crown:OWNER\'S ID:crown:",value=f"```py\n{ownerID}```",inline=True)
@@ -884,9 +968,10 @@ async def statstics(ctx):
     em.add_field(name=":zap:LATENCY:zap:",value=f"```py\n\"{ping}ms\"```",inline=True)
     em.add_field(name="FULL USERNAME",value=f"```py\n{username}```",inline=True)
     em.add_field(name=":school:SERVERS:school:",value=f"```py\n{servers}```",inline=True)
-    em.add_field(name=":bar_chart:RAM USAGE:bar_chart:",value=f"```py\n\"{ram}\"```",inline=True)
+    #em.add_field(name=":bar_chart:RAM USAGE:bar_chart:",value=f"```py\n\"{ram}\"```",inline=True)
     em.add_field(name="<:nextcord:901845590663643147>DISCORD VERSION<:nextcord:901845590663643147>",value=f"```py\n{nextcordV}```",inline=True)
-    em.add_field(name=":computer:HOST:computer:",value=f"```py\n\"Being hosted on Repl.it.\"```",inline=False)
+    em.add_field(name=":computer:HOST:computer:",value=f"```py\n\"Being hosted on my owner's Samsung Galaxy A51 using Termux.\"```",inline=False)
+    em.add_field(name=":timer:ELAPSED TIME:timer:",value=f"```py\n{int((time.time() - begin) / 60)} minutes\n```")
     date_format = "%a, %b %d, %Y %I:%M %p"
     em.set_footer(text=f"Requested by {ctx.author.name}.",icon_url=ctx.author.display_avatar.url)
     await ctx.send(embed=em)
@@ -916,7 +1001,6 @@ async def serverinfo(ctx):
     em.add_field(name="DESCRIPTION",value=f"```\n{description}```",inline=False)
     em.add_field(name="BOTS",value=f"```\n{bots}```",inline=False)
     em.add_field(name="OWNER",value=f"```\n{owner}```",inline=False)
-
     em.set_thumbnail(url=icon)
     em.set_footer(icon_url=ctx.author.display_avatar.url,text=f"Requested by {ctx.author.name}")
     await ctx.send(embed=em)
@@ -1007,6 +1091,7 @@ async def translate(ctx,From=None,To=None,*,question : str=None):
         em = nextcord.Embed(description="Please check your arguments again.\nSyntax `trans src-lang dest-lang text`\nYou can read language abbreviations from [here](https://pastebin.com/PrxskfGq).",color=0xAC27FA,timestamp=datetime.datetime.utcnow())
         em.set_footer(text=f"Requested by {ctx.author.name}",icon_url=ctx.author.display_avatar.url)
         await msg.edit(embed=em)
+
 @client.command()
 async def reverse(self,ctx,*,text : str):
     result = text [::-1]
@@ -1024,7 +1109,7 @@ async def roles(ctx,member : commands.MemberConverter=None):
         em.set_footer(icon_url=ctx.author.display_avatar.url,text=f"Requested by {ctx.author.name}")
         await ctx.send(embed=em)
     else:
-        role = ["No","roles","were","found","for","this","user","."]
+        role = ["No roles were found for this user."]
         await ctx.send(' '.join(role))
 
 client.run(token)
